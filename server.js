@@ -251,3 +251,48 @@ const handleSendNotification = async (req, res) => {
 
 app.post('/api/notifications', handleSendNotification);
 app.post('/api/notifications/send', handleSendNotification);
+// Payment Deposit Endpoint for User App (ffx-tournament.netlify.app)
+app.post('/api/gateway/zapupi/create-order', async (req, res) => {
+    try {
+        const { uid, amount, email } = req.body;
+        
+        // 1. Fetch active ZapUPI credentials from Database
+        const settings = await Gateway.findOne({ provider: 'ZapUPI' });
+        if (!settings || !settings.apiKey) {
+            return res.status(400).json({ success: false, message: 'Payment gateway not configured in Admin Panel.' });
+        }
+
+        const orderId = 'ORD_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
+
+        // 2. Request order creation from ZapUPI API
+        const zapResponse = await fetch('https://zapupi.in/api/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                api_key: settings.apiKey,
+                order_id: orderId,
+                amount: amount,
+                customer_email: email || `${uid}@cyberstrike.app`,
+                redirect_url: 'https://ffx-tournament.netlify.app/payment-status'
+            })
+        });
+
+        const zapData = await zapResponse.json();
+
+        if (zapData.status === 'success' || zapData.payment_url) {
+            return res.json({
+                success: true,
+                paymentUrl: zapData.payment_url || zapData.url,
+                orderId: orderId
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: zapData.message || 'Failed to initiate payment via ZapUPI'
+            });
+        }
+    } catch (err) {
+        console.error('Payment Error:', err);
+        res.status(500).json({ success: false, message: 'Server error connecting to payment gateway.' });
+    }
+});
