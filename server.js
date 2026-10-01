@@ -327,3 +327,12 @@ app.post('/api/gateway/zapupi/create-order', async (req, res) => {
 });
 
 // ... other routes (notifications, staff, etc.) ...
+// Get notifications for user app
+app.get('/api/notifications', async (req, res) => {
+    try {
+        const notifications = await Notification.find().sort({ sentAt: -1 }).limit(20);
+        res.json({ success: true, notifications });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
