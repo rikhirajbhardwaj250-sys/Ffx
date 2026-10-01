@@ -6,22 +6,31 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// REPLACE THE STRING BELOW WITH YOUR MONGODB ATLAS CONNECTION STRING
-const MONGO_URI = 'mongodb+srv://rishix:18112009@cluster0.riyat42.mongodb.net/admin_panel?retryWrites=true&w=majority&appName=Cluster0';
+// --- MONGODB CONNECTION SETUP ---
+// 1. Uses Render Environment Variable 'MONGO_URI' first.
+// 2. Fallback contains cleaned credentials (removed '<' '>' and fixed ending syntax)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://rishix:18112009@cluster0.riyat42.mongodb.net/admin_panel?retryWrites=true&w=majority';
 
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('Connected to MongoDB Atlas!'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 5000 // Fails fast if connection drops instead of buffering indefinitely
+})
+.then(() => console.log('✅ Connected to MongoDB Atlas!'))
+.catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // --- SCHEMAS & MODELS ---
+
+// 1. Staff Schema (Updated with password & phone support)
 const staffSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    role: { type: String, enum: ['Admin', 'Editor', 'Support'], default: 'Support' },
+    phone: { type: String },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['Admin', 'Editor', 'Support', 'Moderator', 'Match Organizer'], default: 'Support' },
     createdAt: { type: Date, default: Date.now }
 });
 const Staff = mongoose.model('Staff', staffSchema);
 
+// 2. Gateway Settings Schema
 const gatewaySchema = new mongoose.Schema({
     provider: { type: String, default: 'ZapUPI' },
     apiKey: { type: String, required: true },
@@ -30,13 +39,16 @@ const gatewaySchema = new mongoose.Schema({
 });
 const Gateway = mongoose.model('Gateway', gatewaySchema);
 
+// 3. Notification Schema
 const notificationSchema = new mongoose.Schema({
     title: { type: String, required: true },
     message: { type: String, required: true },
+    targetUser: { type: String, default: 'ALL' },
     sentAt: { type: Date, default: Date.now }
 });
 const Notification = mongoose.model('Notification', notificationSchema);
 
+// 4. Tutorial Schema
 const tutorialSchema = new mongoose.Schema({
     title: { type: String, required: true },
     videoUrl: { type: String, required: true },
@@ -44,6 +56,7 @@ const tutorialSchema = new mongoose.Schema({
 });
 const Tutorial = mongoose.model('Tutorial', tutorialSchema);
 
+// 5. Coupon Schema
 const couponSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
     amount: { type: Number, required: true },
@@ -53,6 +66,7 @@ const couponSchema = new mongoose.Schema({
 });
 const Coupon = mongoose.model('Coupon', couponSchema);
 
+// 6. Banner Schema
 const bannerSchema = new mongoose.Schema({
     title: { type: String, required: true },
     imageUrl: { type: String, required: true },
@@ -61,6 +75,7 @@ const bannerSchema = new mongoose.Schema({
 });
 const Banner = mongoose.model('Banner', bannerSchema);
 
+// 7. System Config Schema
 const configSchema = new mongoose.Schema({
     appMode: { type: String, enum: ['Live', 'Maintenance', 'Testing'], default: 'Live' }
 });
@@ -71,7 +86,7 @@ const Config = mongoose.model('Config', configSchema);
 // 1. Staff Management
 app.get('/api/staff', async (req, res) => {
     try {
-        const staff = await Staff.find();
+        const staff = await Staff.find().select('-password'); // Exclude password from list view
         res.json(staff);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -80,7 +95,8 @@ app.get('/api/staff', async (req, res) => {
 
 app.post('/api/staff', async (req, res) => {
     try {
-        const newStaff = new Staff(req.body);
+        const { name, email, phone, password, role } = req.body;
+        const newStaff = new Staff({ name, email, phone, password, role });
         await newStaff.save();
         res.status(201).json({ success: true, data: newStaff });
     } catch (err) {
@@ -124,8 +140,8 @@ app.get('/api/notifications', async (req, res) => {
 
 app.post('/api/notifications/send', async (req, res) => {
     try {
-        const { title, message } = req.body;
-        const notif = new Notification({ title, message });
+        const { title, message, targetUser } = req.body;
+        const notif = new Notification({ title, message, targetUser });
         await notif.save();
         res.json({ success: true, message: 'Push Notification Sent Successfully!' });
     } catch (err) {
@@ -195,7 +211,7 @@ app.post('/api/banners', async (req, res) => {
     }
 });
 
-// 7. Mode Management
+// 7. System Config
 app.get('/api/config/mode', async (req, res) => {
     try {
         let config = await Config.findOne();
@@ -217,5 +233,4 @@ app.post('/api/config/mode', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Admin Server Running on Port ${PORT}`));
-              
+app.listen(PORT, () => console.log(`🚀 Admin Server Running on Port ${PORT}`));
