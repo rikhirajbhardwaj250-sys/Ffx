@@ -1,0 +1,15 @@
+{
+  "name": "admin-panel-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Admin Panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "firebase-admin": "^13.4.0"
+  }
+}
