@@ -8,8 +8,8 @@ app.use(cors());
 
 // REPLACE THE STRING BELOW WITH YOUR MONGODB ATLAS CONNECTION STRING
 // Example: 'mongodb+srv://username:password@cluster0.abcde.mongodb.net/admin_panel?retryWrites=true&w=majority'
-const MONGO_URI = mongodb+srv://<rishix>:<18112009>@cluster0.riyat42.mongodb.net/?appName=Cluster0'
-mongoose.connect(MONGO_URI)
+const MONGO_URI = 'mongodb+srv://rishix:18112009@cluster0.riyat42.mongodb.net/admin_panel?retryWrites=true&w=majority&appName=Cluster0';
+
     .then(() => console.log('Connected to MongoDB Atlas!'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
