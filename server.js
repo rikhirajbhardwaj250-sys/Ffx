@@ -234,3 +234,20 @@ app.post('/api/config/mode', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Admin Server Running on Port ${PORT}`));
+// Push Notifications - Handles both /api/notifications and /api/notifications/send
+const handleSendNotification = async (req, res) => {
+    try {
+        const { title, message, targetUser } = req.body;
+        if (!title || !message) {
+            return res.status(400).json({ success: false, message: 'Title and message are required' });
+        }
+        const notif = new Notification({ title, message, targetUser: targetUser || 'ALL' });
+        await notif.save();
+        res.json({ success: true, message: 'Push Notification Sent Successfully!' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+app.post('/api/notifications', handleSendNotification);
+app.post('/api/notifications/send', handleSendNotification);
